@@ -5,6 +5,10 @@
 #include <string.h>
 #include <stdio.h>
 
+#ifndef CTRL
+#define CTRL(c) (c & 037)
+#endif
+
 int WIDTH;
 int YOFFSET;
 static void finish(int sig);
@@ -244,19 +248,14 @@ void right(struct line* l){
 }
 
 void addchar(struct line* l, char* ch){
-    //TODO determine position to insert to based on cursor->x
     int chpos = cursor->x - YOFFSET;       /*+ WIDTH * (l->length / WIDTH) */
     char linenum[5];
     snprintf(linenum, 5, "%d", chpos);
     mvaddstr(3, 10, linenum);
     if(chpos != l->length){
-        char* tmptext = (char*)memset(malloc(l->length + 1), 0, l->length + 1);
-        memmove(tmptext, l->text, chpos);
-        mvaddch(3, 15, *ch);
-        strcat(tmptext, ch);
-        memmove(&tmptext[chpos + 1], &l->text[chpos], l->length - chpos + 1);
-        memmove(l->text, tmptext, l->length + 1);
-        free(tmptext);
+        memmove(&l->text[chpos + 1], &l->text[chpos], l->length - chpos);
+        l->text[chpos] = *ch;
+        l->text[l->length] = '\0';
     } else {
         strcat(l->text, ch);
     }
@@ -272,9 +271,9 @@ void addchar(struct line* l, char* ch){
     mvaddstr(cursor->y, YOFFSET, l->text);
     //mvaddch(cursor->y, cursor->x, (char) *(l->text + l->length));
     l->length += 1;
-    if(l->length % 128 == 0){
-        addstr("!");
+    if(l->length + 1 % 128 == 0){
         l->text = (char*)realloc(l->text, l->length + 128);
+        memset(&l->text[l->length], 0, 128);
     }
     
     
@@ -462,11 +461,11 @@ int main(int argc, char* argv[]){
                 //addch('!');
                 right(curline);
                 break;
-            case KEY_END:
+            case 24:
                 savefile(argv[1]);
                 break;
             default:
-                addchar(curline, (char*) &c);\
+                addchar(curline, (char*) &c);
                 break;
         }
         //attrset(COLOR_PAIR(i % 8));
