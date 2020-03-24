@@ -43,7 +43,7 @@ typedef struct {
 doc* main_d;
 
 void initArray(doc* a, size_t initialSize) {
-    a->array = (intptr_t*)malloc(initialSize * sizeof(intptr_t));
+    a->array = (intptr_t*)memset(malloc(initialSize * sizeof(intptr_t)), 0, initialSize * sizeof(intptr_t));
     a->used = 0;
     a->size = initialSize;
     a->currstart = 0;
@@ -119,7 +119,7 @@ void renderscreen(int start){
         WIDTH = COLS - YOFFSET;
     }
     int r = 0;
-    for(int i = 0; i < end; i++, r++){
+    for(int i = 0; i <= end; i++, r++){
         move(r + 1, YOFFSET);
         struct line* lin = (struct line*)main_d->array[start + i];
         if(lin->length / WIDTH == 0){
@@ -185,16 +185,28 @@ void up(struct line* l){
     }
 }   
 void down(struct line* l){
+    //TODO fix this still not working 100%
+    int epik = main_d->array[1];
     if(l->position < main_d->used){
         if(cursor->y < LINES - 2){
             if(l->length / (WIDTH + 1) == 0){     //WIDTH + 1 because if the line is full but there aren`t 2 lines
                 struct line* downerl = (struct line*)main_d->array[l->position];     //position because position starts from 1
-                if(downerl->length >= cursor->x - YOFFSET + 1){
+                /*if(downerl->length >= cursor->x - YOFFSET + 1){
                     cursor->y += 1;
-                } else {
+                    char linenum[10];
+                    snprintf(linenum, 10, "%d", downerl->position);
+                    mvaddstr(0, 10, linenum);
+                    snprintf(linenum, 10, "%d", l->position);
+                    mvaddstr(0, 20, linenum);
+                    snprintf(linenum, 10, "%d", main_d->array[0]);
+                    mvaddstr(0, 30, linenum);
+                    snprintf(linenum, 10, "%d", downerl);
+                    mvaddstr(0, 40, linenum);
+                } else {*/
+                    //mvaddch(0, 30, 'G');
                     cursor->y += 1;
                     cursor->x = downerl->length + YOFFSET;
-                }
+                //}
                 curline = downerl;
             } else {        //this is for when the line is multi-line
                 //cursor->y += 1;
@@ -246,7 +258,18 @@ void right(struct line* l){
     }
     move(cursor->y, cursor->x);
 }
-
+void home(struct line* l){
+    if(WIDTH - YOFFSET >= l->length){
+        cursor->x = YOFFSET;
+    }
+    move(cursor->y, cursor->x);
+}
+void end(struct line* l){
+    if(WIDTH - YOFFSET >= l->length){
+        cursor->x = l->length + YOFFSET - 1;
+    }
+    move(cursor->y, cursor->x);
+}
 void addchar(struct line* l, char* ch){
     int chpos = cursor->x - YOFFSET;       /*+ WIDTH * (l->length / WIDTH) */
     char linenum[5];
@@ -261,7 +284,7 @@ void addchar(struct line* l, char* ch){
     }
     if(cursor->x == COLS - 1){
         cursor->x = YOFFSET;
-        cursor->y += 1;
+        cursor->y++;
         mvaddch(cursor->y, 0, '|');
         if(cursor->y == LINES - 2){
             renderscreen(l->position);
@@ -282,7 +305,7 @@ void addchar(struct line* l, char* ch){
     mvaddstr(cursor->y, 0, linenum);
     
     
-    cursor->x += 1;
+    cursor->x++;
     move(cursor->y, cursor->x);
 }
 void removeline(struct line* l){
@@ -329,6 +352,13 @@ void removechar(struct line* l){
                 renderscreen(main_d->currstart);
             }                
         }
+    }
+}
+void del(struct line* l){
+    if(l->length > cursor->x){
+        cursor->x++;
+        removechar(l);
+        cursor->x--;
     }
 }
 struct line* newline(int pos){
@@ -429,12 +459,15 @@ int main(int argc, char* argv[]){
     main_d = (doc*)malloc(sizeof(doc));
     initArray(main_d, 12);
     init_cursor();
-    if(argc != 1){
-        readfile(argv[1]); 
+    //if(argc != 1){
+        readfile(/*argv[1]*/ "keszTest");
+        /*down(curline);
+        up(curline);*/
         renderscreen(main_d->currstart);
-    } else {
+        down(curline);
+    /*} else {
         curline = newline(1);
-    }
+    }*/
     renderscreen(main_d->currstart);
     int i = 0;
     for ( ; ; ){
@@ -461,11 +494,21 @@ int main(int argc, char* argv[]){
                 //addch('!');
                 right(curline);
                 break;
+            case KEY_HOME:
+                home(curline);
+                break;
+            case KEY_END:
+                end(curline);
+                break;
+            case KEY_DC:
+                del(curline);
+                break;
             case 24:
                 savefile(argv[1]);
                 break;
             default:
                 addchar(curline, (char*) &c);
+                printf(c);
                 break;
         }
         //attrset(COLOR_PAIR(i % 8));
