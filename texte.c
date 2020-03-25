@@ -97,7 +97,7 @@ void renderscreen(int start){
     main_d->currstart = start;
     int end;
     if(main_d->used >= LINES - 2){
-        end = LINES - 3;
+        end = LINES - 2;
     } else {
         end = main_d->used;
         char linenum[5];
@@ -119,7 +119,7 @@ void renderscreen(int start){
         WIDTH = COLS - YOFFSET;
     }
     int r = 0;
-    for(int i = 0; i <= end; i++, r++){
+    for(int i = 0; i < end; i++, r++){
         move(r + 1, YOFFSET);
         struct line* lin = (struct line*)main_d->array[start + i];
         if(lin->length / WIDTH == 0){
@@ -354,14 +354,14 @@ void removechar(struct line* l){
     if(l->length > 0){
         l->length -= 1;
         cursor->x -= 1;
-        if(cursor->x - YOFFSET < l->length){
+        if(cursor->x - YOFFSET < l->length - 2){
+            endwin();
+            printf("suCC\n");
             for(int pos = cursor->x - YOFFSET + 1; pos < l->length; pos++){
                 l->text[pos - 1] = l->text[pos];
             }
         }
         l->text[l->length] = 0;
-        /*char* e = l->text + l->length;
-        *e = 0;*/
         //mvaddch(cursor->y, cursor->x, 32);
         renderscreen(main_d->currstart);
     } else {
@@ -435,7 +435,7 @@ void readfile(char* path){
         //printf("%s", line);
         curline = newline(r);
         curline->length = read - 1;
-        curline->text = memmove(malloc(read - 1), line, read - 1);
+        curline->text = memmove(memset(malloc(read + 128), 0, read + 128), line, read - 1);
         
         char linenum[5];
         snprintf(linenum, 5, "%d", read);
