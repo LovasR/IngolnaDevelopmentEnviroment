@@ -242,6 +242,21 @@ void left(struct line* l){
     mvaddstr(3, 10, linenum);
     move(cursor->y, cursor->x);
 }
+void cleft(struct line* l ){
+    int chpos = cursor->x - YOFFSET; 
+    //TODO make tab detection 
+    if(l->text[chpos - 1] == ' ' && l->text[chpos - 2] == ' ' && l->text[chpos - 3] == ' ' && l->text[chpos - 4] == ' '){//weird number is 4 spaces in memory*/
+        left(l);
+        left(l);
+        left(l);
+    } else {
+        while (l->text[chpos] != '\0' && l->text[chpos] != ' ' && l->text[chpos] != '(' && l->text[chpos] != ')'){
+            left(l);
+            chpos--;
+        }
+    }
+    left(l);
+}
 void right(struct line* l){
     if(cursor->x - YOFFSET == l->length){    //TODO make it support multiline
         if(l->position < main_d->used){
@@ -257,6 +272,20 @@ void right(struct line* l){
         cursor->x += 1;
     }
     move(cursor->y, cursor->x);
+}
+void cright(struct line* l){
+    int chpos = cursor->x - YOFFSET; 
+    //TODO make tab detection 
+    if(l->text[chpos] == ' ' && l->text[chpos + 1] == ' ' && l->text[chpos + 2] == ' ' && l->text[chpos + 3] == ' '){   //weird number is 4 spaces in memory*/
+        right(l);
+        right(l);
+        right(l);
+    }
+    while (l->text[chpos] != '\0' && l->text[chpos] != ' ' && l->text[chpos] != '(' && l->text[chpos] != ')'){
+        right(l);
+        chpos++;
+    }
+    right(l);
 }
 void home(struct line* l){
     if(WIDTH - YOFFSET >= l->length){
@@ -358,7 +387,8 @@ void del(struct line* l){
     if(l->length > cursor->x){
         cursor->x++;
         removechar(l);
-        cursor->x--;
+        if(cursor->x > YOFFSET)
+            cursor->x--;
     }
 }
 struct line* newline(int pos){
@@ -420,6 +450,37 @@ void readfile(char* path){
 }
 void savefile(char* path){
     FILE * fp;
+    if(path == NULL){
+        path = memset(malloc(128), 0, 128);
+        mvaddstr(LINES - 1, 1, "Name your new file: ");
+        int ex = 0;
+        for (int k,i = 0; ; ){
+            int c = getch();
+            switch(c){
+                case '\r':
+                    ex = 1;
+                    break;
+                case KEY_BACKSPACE:
+                    path[i] = 0;
+                    i--;
+                    break;
+                default:
+                    path[i] = (char) c;
+                    i++;
+                    k++;
+                    addch(c);       //could be done by inserting and mvaddstr
+                    break;
+            }
+            if(ex){
+                break;
+            }
+        }  
+            
+    }
+    //entere:
+    if(path == NULL){
+        path = "asdasd";
+    }
     fp = fopen(path, "w");
     for(int i = 0; i < main_d->used; i++){
         struct line* l = (struct line*)main_d->array[i];
@@ -459,16 +520,16 @@ int main(int argc, char* argv[]){
     main_d = (doc*)malloc(sizeof(doc));
     initArray(main_d, 12);
     init_cursor();
-    //if(argc != 1){
-        readfile(/*argv[1]*/ "keszTest");
+    if(argc != 1){
+        readfile(argv[1]);
         /*down(curline);
         up(curline);*/
         renderscreen(main_d->currstart);
         down(curline);
-    /*} else {
+    } else {
         curline = newline(1);
-    }*/
-    renderscreen(main_d->currstart);
+    }
+    //renderscreen(main_d->currstart);
     int i = 0;
     for ( ; ; ){
         int c = getch();
@@ -503,12 +564,19 @@ int main(int argc, char* argv[]){
             case KEY_DC:
                 del(curline);
                 break;
-            case 24:
+            case 24:        //CTRL_X
                 savefile(argv[1]);
+                break;
+            case 545:
+                cleft(curline);
+                break;
+            case 560:
+                cright(curline);
                 break;
             default:
                 addchar(curline, (char*) &c);
-                printf(c);
+                /*endwin();
+                printf("%d",c);*/
                 break;
         }
         //attrset(COLOR_PAIR(i % 8));
